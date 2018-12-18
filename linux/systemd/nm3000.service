@@ -1,0 +1,10 @@
+[Unit]
+Description=NM3000
+After=network.target
+After=syslog.target
+
+[Install]
+WantedBy=multi-user.target
+Alias=nm3000
+
+[Service]

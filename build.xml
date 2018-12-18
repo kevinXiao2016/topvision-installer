@@ -1,0 +1,1057 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="build" basedir="." default="buildall">
+	<!--+===================================================================+-->
+	<!--|                       Initialization                              |-->
+	<!--+===================================================================+-->
+	<target name="input" unless="project.name">
+		<property name="project.name" value="master-x64" />
+		<buildnumber file="release.number" />
+		<property name="build.number" value="${release.number}" />
+		<property name="version" value="2.6.5.0" />
+		<property name="setup.corp.name" value="TopVision" />
+        <property name="setup.corp.url" value="http://ems.top-vision.cn:8110/spread/" />
+		<property name="setup.corp.name.lowcase" value="topvision" />
+		<property name="app.name" value="NM3000" />
+		<echo>input:${project.name} ${version} ${os.arch}</echo>
+	</target>
+	<target name="init" depends="input">
+		<java classname="org.eclipse.core.launcher.Main" failonerror="true" fork="true" dir="">
+			<jvmarg value="-version" />
+		</java>
+		<condition property="os_arch" value="amd64" else="x86">
+			<os arch="amd64" />
+		</condition>
+		<condition property="isX64">
+			<os arch="amd64" />
+		</condition>
+		<available file="${basedir}/jre_${os_arch}" type="dir" property="jre.dir" value="${basedir}/jre_${os_arch}" />
+		<available file="${basedir}/mysql_${os_arch}" type="dir" property="mysql.dir" value="${basedir}/mysql_${os_arch}" />
+		<echo>project.name:${project.name}</echo>
+		<echo>os.arch:${os.arch}</echo>
+		<echo>os_arch:${os_arch}</echo>
+		<echo>oem.name:${oem.name}</echo>
+		<echo>oem.corp.name.zh.cn:${oem.corp.name.zh.cn}</echo>
+		<echo>oem.corp.name.zh.cn.unicode:${oem.corp.name.zh.cn.unicode}</echo>
+		<echo>oem.corp.name.en.us:${oem.corp.name.en.us}</echo>
+        <echo>setup.corp.name:${setup.corp.name}</echo>
+        <echo>setup.corp.url:${setup.corp.url}</echo>
+		<echo>setup.corp.name.lowcase:${setup.corp.name.lowcase}</echo>
+		<echo>app.name:${app.name}</echo>
+		<tstamp>
+			<format property="build.time" pattern="yyyyMMdd-HH:mm:ss" />
+			<format property="build.datetime" pattern="yyyyMMddHHmmss" />
+			<format property="build.year" pattern="yyyy" />
+		</tstamp>
+		<property name="debug" value="on" />
+		<property name="encoding" value="UTF-8" />
+		<property name="optimize" value="yes" />
+		<property name="updatedProperty" value="true" />
+		<property name="includeAntRuntime" value="false" />
+
+		<property name="project.dir" value="${basedir}/.." />
+		<property name="java.dir" value="${basedir}/src/java" />
+		<property name="build.dir" value="${basedir}/.build" />
+		<property name="lib.dir" value="${basedir}/lib" />
+		<property name="project.dir" value="${basedir}/.." />
+		<property name="common.dir" value="${project.dir}/topvision-common" />
+		<property name="common.src.dir" value="${common.dir}/src" />
+		<property name="common.mibs.dir" value="${common.dir}/mibs" />
+		<property name="console.dir" value="${project.dir}/topvision-console" />
+		<property name="console.build.dir" value="${console.dir}/.build" />
+		<property name="console.java.dir" value="${console.dir}/src/java" />
+		<property name="console.test.dir" value="${console.dir}/src/test" />
+		<property name="server.dir" value="${project.dir}/topvision-server" />
+		<property name="server.build.dir" value="${server.dir}/.build" />
+		<property name="server.classes.dir" value="${server.dir}/webapp/WEB-INF/classes" />
+		<property name="server.lib.dir" value="${server.dir}/webapp/WEB-INF/lib" />
+		<property name="server.java.dir" value="${server.dir}/src/java" />
+		<property name="server.test.dir" value="${server.dir}/src/test" />
+		<property name="server.product.dir" value="${server.dir}/src/product" />
+		<property name="web.dir" value="${server.dir}/webapp" />
+		<property name="admin.dir" value="${server.dir}/src/admin" />
+		<property name="dist.ems.dir" value="${basedir}/dist/ems" />
+		<property name="dist.enginemgr.dir" value="${basedir}/dist/enginemgr" />
+		<property name="setup.dir" value="${basedir}/setup" />
+		<property name="InnoSetup.dir" value="${basedir}/InnoSetup5" />
+
+		<path id="third-console">
+			<fileset dir="${console.dir}/lib">
+				<include name="**/*.jar" />
+			</fileset>
+		</path>
+		<path id="third-server">
+			<fileset dir="${server.dir}/lib">
+				<include name="*.jar" />
+			</fileset>
+			<fileset dir="${server.lib.dir}">
+				<include name="*.jar" />
+			</fileset>
+		</path>
+		<delete dir="${build.dir}" />
+		<mkdir dir="${build.dir}" />
+		<javac destdir="${build.dir}" srcdir="${java.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<include name="com/topvision/**/*.java" />
+			<classpath>
+				<path refid="third-server" />
+			</classpath>
+		</javac>
+		<taskdef name="readV" classname="com.topvision.framework.common.ReadVersionTask" classpath="${build.dir}" />
+		<taskdef name="readA" classname="com.topvision.framework.common.ReadAnnotationTask" classpath="${build.dir}" />
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Clean                                    |-->
+	<!--+===================================================================+-->
+	<target name="clean" depends="init">
+		<delete dir="${dist.ems.dir}" />
+		<mkdir dir="${dist.ems.dir}/webapp/WEB-INF/lib" />
+		<mkdir dir="${dist.ems.dir}/logs" />
+		<delete dir="${dist.enginemgr.dir}" />
+		<mkdir dir="${dist.enginemgr.dir}/logs" />
+		<mkdir dir="${dist.enginemgr.dir}/lib" />
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy Installer                         |-->
+	<!--+===================================================================+-->
+	<target name="deploy-installer" depends="init">
+		<delete dir="${build.dir}" />
+		<mkdir dir="${build.dir}" />
+
+		<javac destdir="${build.dir}" srcdir="${java.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<include name="com/topvision/**/*.java" />
+			<classpath>
+				<path refid="third-server" />
+			</classpath>
+		</javac>
+		<readA name="installerVersion" clazz="com.topvision.framework.Version" classpath="${java.dir}" />
+
+		<jar jarfile="${dist.ems.dir}/lib/installer-${installerVersion}.jar">
+			<fileset dir="${build.dir}">
+				<include name="**/*" />
+			</fileset>
+		</jar>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy Mysql,JRE                         |-->
+	<!--+===================================================================+-->
+	<target name="deploy-env" depends="init">
+		<echo>Deploy mysql,jre...</echo>
+		<mkdir dir="${dist.ems.dir}/mysql" />
+		<copy todir="${dist.ems.dir}/mysql">
+			<fileset dir="${mysql.dir}">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+		<mkdir dir="${dist.ems.dir}/jre" />
+		<copy todir="${dist.ems.dir}/jre">
+			<fileset dir="${jre.dir}">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+		<fixcrlf srcdir="${dist.ems.dir}" includes="**/*.sh" eol="lf" eof="remove" />
+		<fixcrlf srcdir="${dist.ems.dir}" includes="**/*.bat" eol="crlf" />
+		<fixcrlf srcdir="${dist.ems.dir}" includes="webapp/WEB-INF/conf/*" eol="crlf" />
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy Console                           |-->
+	<!--+===================================================================+-->
+	<target name="deploy-console" depends="init">
+		<echo>Deploy console...</echo>
+		<delete dir="${console.build.dir}" />
+		<mkdir dir="${console.build.dir}" />
+		<javac destdir="${console.build.dir}" srcdir="${console.java.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<include name="com/topvision/console/Version.java" />
+			<classpath>
+				<path refid="third-console" />
+			</classpath>
+		</javac>
+		<readA name="consoleVersion" clazz="com.topvision.console.Version" classpath="${console.build.dir}" />
+
+		<copy todir="${dist.ems.dir}">
+			<fileset dir="${console.dir}">
+				<include name="bin/*.bat" />
+				<include name="bin/*.sh" />
+				<include name="bin/*.dll" />
+				<include name="bin/*.so" />
+				<include name="bin/*.exe" />
+				<include name="bin/*.txt" />
+				<include name="monitor/*.bat" />
+				<include name="monitor/*.exe" />
+				<include name="plugins/*.jar" />
+				<include name="conf/**/*" />
+				<include name="lib/**/*" />
+				<exclude name="conf/report.forbid" />
+			</fileset>
+		</copy>
+		<replace file="${dist.ems.dir}/bin/nm3000Start.sh" token="@console.jar@" value="console-${consoleVersion}.jar" encoding="${encoding}" />
+		<replace file="${dist.ems.dir}/bin/nm3000Stop.sh" token="@console.jar@" value="console-${consoleVersion}.jar" encoding="${encoding}" />
+		<replace file="${dist.ems.dir}/bin/nm3000Restart.sh" token="@console.jar@" value="console-${consoleVersion}.jar" encoding="${encoding}" />
+		<replace file="${dist.ems.dir}/conf/config.ini" encoding="${encoding}">
+			<replacefilter>
+				<replacetoken>webapp.war=../topvision-server/webapp</replacetoken>
+				<replacevalue>webapp.war=webapp</replacevalue>
+			</replacefilter>
+			<replacefilter>
+				<replacetoken>org.apache.jasper.compiler.disablejsr199=false</replacetoken>
+				<replacevalue>org.apache.jasper.compiler.disablejsr199=true</replacevalue>
+			</replacefilter>
+		</replace>
+		<copy todir="${console.build.dir}">
+			<fileset dir="${console.java.dir}">
+				<include name="com/topvision/**/Version.java" />
+			</fileset>
+			<filterset>
+				<filter token="20110101-12:00:00" value="${build.time}" />
+				<filter token="V100R001" value="${consoleVersion}" />
+				<filter token="B001" value="${build.number}" />
+				<filter token="Victor" value="${user.name}" />
+			</filterset>
+		</copy>
+		<javac destdir="${console.build.dir}" srcdir="${console.build.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<include name="com/topvision/console/**/*.java" />
+			<classpath>
+				<path refid="third-console" />
+			</classpath>
+		</javac>
+		<javac destdir="${console.build.dir}" srcdir="${console.java.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<include name="com/topvision/console/**/*.java" />
+			<include name="org/eclipse/jetty/server/*.java" />
+			<classpath>
+				<path refid="third-console" />
+			</classpath>
+		</javac>
+		<jar jarfile="${dist.ems.dir}/lib/console-${consoleVersion}.jar">
+			<fileset dir="${console.build.dir}">
+				<include name="**/*" />
+			</fileset>
+			<fileset dir="${console.java.dir}">
+				<include name="**/*" />
+				<exclude name="**/*.java" />
+			</fileset>
+		</jar>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy Core                              |-->
+	<!--+===================================================================+-->
+	<target name="deploy-core" depends="clean">
+		<echo>Deploy Server core...</echo>
+		<delete dir="${server.build.dir}" />
+		<mkdir dir="${server.build.dir}" />
+
+		<antcall target="deploy-module" inheritAll="true" inheritRefs="true">
+			<param name="module" value="framework" />
+			<param name="module.dir" value="framework" />
+		</antcall>
+
+		<copy todir="${server.build.dir}">
+			<fileset dir="${server.java.dir}/platform">
+				<include name="com/topvision/platform/SystemVersion.java" />
+			</fileset>
+			<filterset>
+				<filter token="20110101-12:00:00" value="${build.time}" />
+				<filter token="B001" value="${build.number}" />
+				<filter token="Victor" value="${user.name}" />
+			</filterset>
+		</copy>
+		<javac destdir="${server.build.dir}" srcdir="${server.build.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<include name="com/topvision/platform/SystemVersion.java" />
+			<classpath>
+				<path refid="third-server" />
+			</classpath>
+		</javac>
+		<readV name="version" clazz="com.topvision.platform.SystemVersion" classpath="${server.build.dir}" />
+
+		<antcall target="deploy-module" inheritAll="true" inheritRefs="true">
+			<param name="module" value="exception" />
+			<param name="module.dir" value="exception" />
+		</antcall>
+		<antcall target="deploy-module" inheritAll="true" inheritRefs="true">
+			<param name="module" value="facade" />
+			<param name="module.dir" value="ems/facade" />
+		</antcall>
+		<antcall target="deploy-module" inheritAll="true" inheritRefs="true">
+			<param name="module" value="enginemgr" />
+			<param name="module.dir" value="ems/enginemgr" />
+		</antcall>
+		<antcall target="deploy-module" inheritAll="true" inheritRefs="true">
+			<param name="module" value="platform" />
+			<param name="module.dir" value="platform" />
+		</antcall>
+		<antcall target="deploy-module" inheritAll="true" inheritRefs="true">
+			<param name="module" value="engine" />
+			<param name="module.dir" value="ems/engine" />
+		</antcall>
+
+		<echo>Deploy server...</echo>
+		<delete dir="${server.build.dir}" />
+		<mkdir dir="${server.build.dir}" />
+
+		<copy todir="${server.build.dir}">
+			<fileset dir="${server.java.dir}/server">
+				<include name="com/topvision/ems/Version.java" />
+			</fileset>
+			<filterset>
+				<filter token="20110101-12:00:00" value="${build.time}" />
+				<filter token="V100R001" value="${version}" />
+				<filter token="B001" value="${build.number}" />
+				<filter token="Victor" value="${user.name}" />
+			</filterset>
+		</copy>
+		<copy todir="${server.build.dir}">
+			<fileset dir="${server.java.dir}/server">
+				<include name="com/topvision/ems/**" />
+				<include name="database/**" />
+				<exclude name="com/topvision/ems/**/struts-*.xml" />
+				<exclude name="com/topvision/ems/**/*.properties" />
+				<exclude name="com/topvision/ems/**/*.java" />
+			</fileset>
+		</copy>
+		<javac destdir="${server.build.dir}" srcdir="${server.build.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<classpath>
+				<path>
+					<fileset dir="${dist.ems.dir}/webapp/WEB-INF/lib">
+						<include name="*.jar" />
+					</fileset>
+				</path>
+			</classpath>
+		</javac>
+		<javac destdir="${server.build.dir}" srcdir="${server.java.dir}/server" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<classpath>
+				<path>
+					<fileset dir="${server.dir}/lib">
+						<include name="*.jar" />
+					</fileset>
+					<fileset dir="${server.lib.dir}">
+						<include name="*.jar" />
+					</fileset>
+					<fileset dir="${dist.ems.dir}/webapp/WEB-INF/lib">
+						<include name="*.jar" />
+					</fileset>
+				</path>
+			</classpath>
+		</javac>
+		<jar jarfile="${dist.ems.dir}/webapp/WEB-INF/lib/topvision-server-${version}.jar">
+			<fileset dir="${server.build.dir}">
+				<include name="**/*" />
+			</fileset>
+		</jar>
+		<copy todir="${dist.ems.dir}/webapp/WEB-INF/classes">
+			<fileset dir="${server.java.dir}/server">
+				<include name="com/topvision/ems/**/struts-*.xml" />
+				<include name="com/topvision/ems/**/*.properties" />
+			</fileset>
+		</copy>
+
+		<copy todir="${dist.ems.dir}">
+			<fileset dir="${server.dir}">
+				<include name="webapp/**/*" />
+				<exclude name="webapp/WEB-INF/classes/**" />
+				<exclude name="webapp/cmc/**" />
+				<exclude name="webapp/epon/**" />
+				<exclude name="webapp/cmts/**" />
+				<exclude name="webapp/gpon/**" />
+				<exclude name="webapp/cm/**" />
+				<exclude name="webapp/mobile/**" />
+			</fileset>
+		</copy>
+
+		<copy todir="${dist.ems.dir}/webapp/WEB-INF/mibs">
+			<fileset dir="${common.mibs.dir}">
+				<include name="*" />
+			</fileset>
+		</copy>
+		<copy todir="${dist.ems.dir}/webapp/WEB-INF/classes">
+			<fileset dir="${common.src.dir}">
+				<include name="com/topvision/ems/**/deviceVersionFunctions_*.xml" />
+			</fileset>
+		</copy>
+
+		<replace file="${dist.ems.dir}/webapp/WEB-INF/classes/com/topvision/platform/resources_zh_CN.properties" token="2016" value="${build.year}" encoding="${encoding}" />
+		<replace file="${dist.ems.dir}/webapp/WEB-INF/classes/com/topvision/platform/resources_en_US.properties" token="2016" value="${build.year}" encoding="${encoding}" />
+
+		<copy file="${server.dir}/webapp/WEB-INF/conf/config.properties" tofile="${dist.ems.dir}/webapp/WEB-INF/conf/config_en.properties">
+			<filterset>
+				<filter token="language = zh_CN" value="language = en_US" />
+			</filterset>
+		</copy>
+		<replace file="${dist.ems.dir}/webapp/WEB-INF/conf/config_en.properties" token="language = zh_CN" value="language = en_US" encoding="${encoding}" />
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy module                            |-->
+	<!--+===================================================================+-->
+	<target name="deploy-module" if="module">
+		<echo>Deploy ${module}...</echo>
+		<delete dir="${server.build.dir}" />
+		<mkdir dir="${server.build.dir}" />
+		<javac destdir="${server.build.dir}" srcdir="${server.java.dir}/${module}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<include name="com/topvision/${module.dir}/Version.java" />
+			<classpath>
+				<path>
+					<fileset dir="${dist.ems.dir}/webapp/WEB-INF/lib">
+						<include name="*.jar" />
+					</fileset>
+				</path>
+			</classpath>
+		</javac>
+		<readA name="moduleVersion" clazz="com.topvision.${module.dir}.Version" classpath="${server.build.dir}" />
+
+		<copy todir="${server.build.dir}">
+			<fileset dir="${server.java.dir}/${module}">
+				<include name="com/topvision/${module.dir}/Version.java" />
+			</fileset>
+			<filterset>
+				<filter token="20110101-12:00:00" value="${build.time}" />
+				<filter token="V100R001" value="${moduleVersion}" />
+				<filter token="B001" value="${build.number}" />
+				<filter token="Victor" value="${user.name}" />
+			</filterset>
+		</copy>
+		<copy todir="${server.build.dir}">
+			<fileset dir="${server.java.dir}/${module}">
+				<include name="com/topvision/${module.dir}/SystemVersion.java" />
+			</fileset>
+			<filterset>
+				<filter token="20110101-12:00:00" value="${build.time}" />
+				<filter token="B001" value="${build.number}" />
+				<filter token="Victor" value="${user.name}" />
+			</filterset>
+		</copy>
+		<copy todir="${server.build.dir}">
+			<fileset dir="${server.java.dir}/${module}">
+				<include name="META-INF/**" />
+				<include name="*.*" />
+				<include name="com/topvision/${module.dir}/**" />
+				<exclude name="com/topvision/**/struts-*.xml" />
+				<exclude name="com/topvision/${module.dir}/**/*.java" />
+			</fileset>
+		</copy>
+		<delete file="${server.build.dir}/com/topvision/${module.dir}/Version.class" />
+		<javac destdir="${server.build.dir}" srcdir="${server.build.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<classpath>
+				<path>
+					<fileset dir="${dist.ems.dir}/webapp/WEB-INF/lib">
+						<include name="*.jar" />
+					</fileset>
+				</path>
+			</classpath>
+		</javac>
+		<delete file="${server.build.dir}/com/topvision/${module.dir}/Version.java" />
+		<javac destdir="${server.build.dir}" srcdir="${server.java.dir}/${module}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<classpath>
+				<path>
+					<fileset dir="${server.dir}/lib">
+						<include name="*.jar" />
+					</fileset>
+					<fileset dir="${server.lib.dir}">
+						<include name="*.jar" />
+					</fileset>
+					<fileset dir="${dist.ems.dir}/webapp/WEB-INF/lib">
+						<include name="*.jar" />
+					</fileset>
+				</path>
+			</classpath>
+		</javac>
+		<jar jarfile="${dist.ems.dir}/webapp/WEB-INF/lib/topvision-${module}-${moduleVersion}.jar">
+			<fileset dir="${server.build.dir}">
+				<include name="**/*" />
+			</fileset>
+		</jar>
+		<copy todir="${dist.ems.dir}/webapp/WEB-INF/classes">
+			<fileset dir="${server.java.dir}/${module}">
+				<include name="com/topvision/${module.dir}/**/struts-*.xml" />
+				<include name="com/topvision/${module.dir}/**/*.properties" />
+			</fileset>
+		</copy>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy product                           |-->
+	<!--+===================================================================+-->
+	<target name="deploy-product" if="product.name">
+		<echo>Deploy ${product.name}...</echo>
+		<delete dir="${server.build.dir}" />
+		<mkdir dir="${server.build.dir}" />
+		<javac destdir="${server.build.dir}" srcdir="${server.product.dir}/${product.name}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<include name="com/topvision/ems/${product.name}/Version.java" />
+			<classpath>
+				<path>
+					<fileset dir="${dist.ems.dir}/webapp/WEB-INF/lib">
+						<include name="*.jar" />
+					</fileset>
+				</path>
+			</classpath>
+		</javac>
+		<readA name="productVersion" clazz="com.topvision.ems.${product.name}.Version" classpath="${server.build.dir}" />
+
+		<copy todir="${server.build.dir}">
+			<fileset dir="${server.product.dir}/${product.name}">
+				<include name="com/topvision/ems/${product.name}/Version.java" />
+			</fileset>
+			<filterset>
+				<filter token="20110101-12:00:00" value="${build.time}" />
+				<filter token="V100R001" value="${productVersion}" />
+				<filter token="B001" value="${build.number}" />
+				<filter token="Victor" value="${user.name}" />
+			</filterset>
+		</copy>
+		<copy todir="${server.build.dir}">
+			<fileset dir="${server.product.dir}/${product.name}">
+				<include name="com/topvision/ems/${product.name}/**" />
+				<exclude name="com/topvision/ems/${product.name}/**/struts-*.xml" />
+				<exclude name="com/topvision/ems/${product.name}/**/*.properties" />
+				<exclude name="com/topvision/ems/${product.name}/**/*.java" />
+			</fileset>
+		</copy>
+		<javac destdir="${server.build.dir}" srcdir="${server.build.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<classpath>
+				<path>
+					<fileset dir="${dist.ems.dir}/webapp/WEB-INF/lib">
+						<include name="*.jar" />
+					</fileset>
+				</path>
+			</classpath>
+		</javac>
+		<javac destdir="${server.build.dir}" srcdir="${server.product.dir}/${product.name}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<classpath>
+				<path>
+					<fileset dir="${server.dir}/lib">
+						<include name="*.jar" />
+					</fileset>
+					<fileset dir="${server.lib.dir}">
+						<include name="*.jar" />
+					</fileset>
+					<fileset dir="${dist.ems.dir}/webapp/WEB-INF/lib">
+						<include name="*.jar" />
+					</fileset>
+				</path>
+			</classpath>
+		</javac>
+		<jar jarfile="${dist.ems.dir}/webapp/WEB-INF/lib/topvision-${product.name}-${productVersion}.jar">
+			<fileset dir="${server.build.dir}">
+				<include name="**/*" />
+			</fileset>
+		</jar>
+		<copy todir="${dist.ems.dir}/webapp/WEB-INF/classes">
+			<fileset dir="${server.product.dir}/${product.name}">
+				<include name="com/topvision/ems/${product.name}/**/struts-*.xml" />
+				<include name="com/topvision/ems/${product.name}/**/*.properties" />
+			</fileset>
+		</copy>
+		<copy todir="${dist.ems.dir}/webapp/">
+			<fileset dir="${server.dir}/webapp">
+				<include name="${product.name}/**" />
+			</fileset>
+		</copy>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy PON                               |-->
+	<!--+===================================================================+-->
+	<target name="deploy-pon">
+		<echo>Deploy PON...</echo>
+		<delete dir="${server.build.dir}" />
+		<mkdir dir="${server.build.dir}" />
+		<javac destdir="${server.build.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<src path="${server.product.dir}/epon" />
+			<src path="${server.product.dir}/gpon" />
+			<include name="com/topvision/ems/epon/Version.java" />
+			<include name="com/topvision/ems/gpon/Version.java" />
+			<classpath>
+				<path>
+					<fileset dir="${dist.ems.dir}/webapp/WEB-INF/lib">
+						<include name="*.jar" />
+					</fileset>
+				</path>
+			</classpath>
+		</javac>
+		<readA name="eponVersion" clazz="com.topvision.ems.epon.Version" classpath="${server.build.dir}" />
+		<readA name="gponVersion" clazz="com.topvision.ems.gpon.Version" classpath="${server.build.dir}" />
+
+		<copy todir="${server.build.dir}">
+			<fileset dir="${server.product.dir}/epon">
+				<include name="com/topvision/ems/epon/Version.java" />
+			</fileset>
+			<filterset>
+				<filter token="20110101-12:00:00" value="${build.time}" />
+				<filter token="V100R001" value="${eponVersion}" />
+				<filter token="B001" value="${build.number}" />
+				<filter token="Victor" value="${user.name}" />
+			</filterset>
+		</copy>
+		<copy todir="${server.build.dir}">
+			<fileset dir="${server.product.dir}/gpon">
+				<include name="com/topvision/ems/gpon/Version.java" />
+			</fileset>
+			<filterset>
+				<filter token="20110101-12:00:00" value="${build.time}" />
+				<filter token="V100R001" value="${gponVersion}" />
+				<filter token="B001" value="${build.number}" />
+				<filter token="Victor" value="${user.name}" />
+			</filterset>
+		</copy>
+		<copy todir="${server.build.dir}">
+			<fileset dir="${server.product.dir}/epon">
+				<include name="com/topvision/ems/epon/**" />
+				<exclude name="com/topvision/ems/epon/**/struts-*.xml" />
+				<exclude name="com/topvision/ems/epon/**/*.properties" />
+				<exclude name="com/topvision/ems/epon/**/*.java" />
+			</fileset>
+			<fileset dir="${server.product.dir}/gpon">
+				<include name="com/topvision/ems/gpon/**" />
+				<exclude name="com/topvision/ems/gpon/**/struts-*.xml" />
+				<exclude name="com/topvision/ems/gpon/**/*.properties" />
+				<exclude name="com/topvision/ems/gpon/**/*.java" />
+			</fileset>
+		</copy>
+		<javac destdir="${server.build.dir}" srcdir="${server.build.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<classpath>
+				<path>
+					<fileset dir="${dist.ems.dir}/webapp/WEB-INF/lib">
+						<include name="*.jar" />
+					</fileset>
+				</path>
+			</classpath>
+		</javac>
+		<javac destdir="${server.build.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<src path="${server.product.dir}/gpon" />
+			<src path="${server.product.dir}/epon" />
+			<classpath>
+				<path>
+					<fileset dir="${server.dir}/lib">
+						<include name="*.jar" />
+					</fileset>
+					<fileset dir="${server.lib.dir}">
+						<include name="*.jar" />
+					</fileset>
+					<fileset dir="${dist.ems.dir}/webapp/WEB-INF/lib">
+						<include name="*.jar" />
+					</fileset>
+				</path>
+			</classpath>
+		</javac>
+		<jar jarfile="${dist.ems.dir}/webapp/WEB-INF/lib/topvision-epon-${eponVersion}.jar">
+			<fileset dir="${server.build.dir}">
+				<include name="com/topvision/ems/epon/**/*" />
+			</fileset>
+		</jar>
+		<jar jarfile="${dist.ems.dir}/webapp/WEB-INF/lib/topvision-gpon-${gponVersion}.jar">
+			<fileset dir="${server.build.dir}">
+				<include name="com/topvision/ems/gpon/**/*" />
+			</fileset>
+		</jar>
+		<copy todir="${dist.ems.dir}/webapp/WEB-INF/classes">
+			<fileset dir="${server.product.dir}/epon">
+				<include name="com/topvision/ems/epon/**/struts-*.xml" />
+				<include name="com/topvision/ems/epon/**/*.properties" />
+			</fileset>
+			<fileset dir="${server.product.dir}/gpon">
+				<include name="com/topvision/ems/gpon/**/struts-*.xml" />
+				<include name="com/topvision/ems/gpon/**/*.properties" />
+			</fileset>
+		</copy>
+		<copy todir="${dist.ems.dir}/webapp/">
+			<fileset dir="${server.dir}/webapp">
+				<include name="epon/**" />
+				<include name="gpon/**" />
+			</fileset>
+		</copy>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy admin                             |-->
+	<!--+===================================================================+-->
+	<target name="deploy-admin" depends="clean">
+		<echo>Deploy Admin...</echo>
+		<delete dir="${server.build.dir}" />
+		<mkdir dir="${server.build.dir}" />
+		<javac destdir="${server.build.dir}" srcdir="${admin.dir}" debug="${debug}" optimize="${optimize}" encoding="${encoding}" updatedProperty="${updatedProperty}" includeAntRuntime="${includeAntRuntime}">
+			<classpath>
+				<path>
+					<fileset dir="${server.dir}/lib">
+						<include name="*.jar" />
+					</fileset>
+					<fileset dir="${server.lib.dir}">
+						<include name="*.jar" />
+					</fileset>
+					<fileset dir="${dist.ems.dir}/webapp/WEB-INF/lib">
+						<include name="*.jar" />
+					</fileset>
+				</path>
+			</classpath>
+		</javac>
+		<copy todir="${server.build.dir}">
+			<fileset dir="${admin.dir}">
+				<include name="com/topvision/ems/admin/**" />
+				<exclude name="com/topvision/ems/admin/**/struts-*.xml" />
+				<exclude name="com/topvision/ems/admin/**/*.properties" />
+				<exclude name="com/topvision/ems/admin/**/*.java" />
+			</fileset>
+		</copy>
+		<jar jarfile="${dist.ems.dir}/webapp/WEB-INF/lib/topvision-admin-${version}.jar">
+			<fileset dir="${server.build.dir}">
+				<include name="**/*" />
+			</fileset>
+		</jar>
+		<copy todir="${dist.ems.dir}/webapp/WEB-INF/classes">
+			<fileset dir="${admin.dir}">
+				<include name="com/topvision/ems/admin/**/struts-*.xml" />
+				<include name="com/topvision/ems/admin/**/*.properties" />
+			</fileset>
+		</copy>
+		<copy todir="${dist.ems.dir}/webapp/">
+			<fileset dir="${server.dir}/webapp">
+				<include name="admin/**" />
+			</fileset>
+		</copy>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy CCMTS                             |-->
+	<!--+===================================================================+-->
+	<target name="deploy-ccmts">
+		<antcall target="deploy-product" inheritAll="true" inheritRefs="true">
+			<param name="product.name" value="cmc" />
+		</antcall>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy CCMTS                             |-->
+	<!--+===================================================================+-->
+	<target name="deploy-cmts">
+		<antcall target="deploy-product" inheritAll="true" inheritRefs="true">
+			<param name="product.name" value="cmts" />
+		</antcall>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy Cm                                |-->
+	<!--+===================================================================+-->
+	<target name="deploy-cm">
+		<antcall target="deploy-product" inheritAll="true" inheritRefs="true">
+			<param name="product.name" value="cm" />
+		</antcall>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy mobile                                |-->
+	<!--+===================================================================+-->
+	<target name="deploy-mobile">
+		<antcall target="deploy-product" inheritAll="true" inheritRefs="true">
+			<param name="product.name" value="mobile" />
+		</antcall>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy EngineMgr                         |-->
+	<!--+===================================================================+-->
+	<target name="deploy-enginemgr" depends="init">
+		<jar jarfile="${dist.enginemgr.dir}/lib/topvision-resource.jar">
+			<fileset dir="${dist.ems.dir}/webapp/WEB-INF/classes">
+				<include name="**/*" />
+			</fileset>
+		</jar>
+		<copy todir="${dist.enginemgr.dir}">
+			<fileset dir="${dist.ems.dir}/webapp/WEB-INF/">
+				<include name="conf/engine.properties" />
+				<include name="conf/logback.xml" />
+				<include name="lib/aopalliance-*.jar" />
+				<include name="lib/commons-logging-*.jar" />
+				<include name="lib/slf4j-api-*.jar" />
+				<include name="lib/log4j-over-slf4j-*.jar" />
+				<include name="lib/spring-aop-*.jar" />
+				<include name="lib/spring-beans-*.jar" />
+				<include name="lib/spring-context-*.jar" />
+				<include name="lib/spring-core-*.jar" />
+				<include name="lib/spring-expression-*.jar" />
+				<include name="lib/logback-classic-*.jar" />
+				<include name="lib/logback-core-*.jar" />
+				<include name="lib/topvision-enginemgr-*.jar" />
+				<include name="lib/topvision-framework-*.jar" />
+			</fileset>
+		</copy>
+		<replace file="${dist.enginemgr.dir}/conf/logback.xml" token="collector.logback" value="enginemgr.logback" encoding="${encoding}" />
+		<copy todir="${dist.enginemgr.dir}/bin">
+			<fileset dir="${server.dir}/bin/">
+				<include name="*" />
+			</fileset>
+		</copy>
+		<copy todir="${dist.enginemgr.dir}/lib">
+			<fileset dir="${server.dir}/lib/">
+				<include name="servlet-api-2.5.jar" />
+			</fileset>
+		</copy>
+		<fixcrlf srcdir="${dist.enginemgr.dir}" includes="**/*.sh" eol="lf" eof="remove" />
+		<fixcrlf srcdir="${dist.enginemgr.dir}" includes="**/*.bat" eol="crlf" />
+		<zip destfile="${basedir}/dist/${app.name}-V${version}_${project.name}_${build.number}_enginemgr.zip">
+			<fileset dir="${dist.enginemgr.dir}">
+				<include name="**" />
+			</fileset>
+		</zip>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy Cm                                |-->
+	<!--+===================================================================+-->
+	<target name="deploy-oem-src" if="oem.src">
+		<antcall target="deploy-product" inheritAll="true" inheritRefs="true">
+			<param name="product.name" value="${oem.name}" />
+		</antcall>
+	</target>
+	<!--+===================================================================+-->
+	<!--|                          Deploy OEM                             |-->
+	<!--+===================================================================+-->
+	<target name="deploy-oem" depends="init" if="oem.name">
+		<condition property="oem.src">
+			<available file="${server.product.dir}/${oem.name}" type="dir" />
+		</condition>
+		<antcall target="deploy-oem-src" inheritAll="true" inheritRefs="true">
+		</antcall>
+		<copy todir="${dist.ems.dir}/webapp" overwrite="true">
+			<fileset dir="${basedir}/setup/${oem.name}">
+				<include name="**" />
+			</fileset>
+		</copy>
+		<replace file="${dist.ems.dir}/webapp/WEB-INF/classes/com/topvision/platform/resources_zh_CN.properties" token="\u9f0e\u70b9\u89c6\u8baf\u79d1\u6280\u6709\u9650\u516c\u53f8" value="${oem.corp.name.zh.cn.unicode}" encoding="${encoding}" />
+		<replace file="${dist.ems.dir}/webapp/WEB-INF/classes/com/topvision/platform/resources_en_US.properties" token="TOPVISION TECHNOLOGIES CO.,LTD." value="${oem.corp.name.en.us}" encoding="${encoding}" />
+		<replace file="${dist.ems.dir}/webapp/WEB-INF/classes/com/topvision/platform/resources_zh_CN.properties" token="NM3000" value="${app.name}" encoding="${encoding}" />
+		<replace file="${dist.ems.dir}/webapp/WEB-INF/classes/com/topvision/platform/resources_en_US.properties" token="NM3000" value="${app.name}" encoding="${encoding}" />
+		<replace file="${dist.ems.dir}/webapp/WEB-INF/classes/com/topvision/ems/resources/resources_zh_CN.properties" token="\u9f0e\u70b9" value="\u6211\u53f8" encoding="${encoding}" />
+		<replace file="${dist.ems.dir}/webapp/WEB-INF/conf/config.properties" token="oem = topvision" value="oem = ${oem.name}" encoding="${encoding}" />
+		<replace file="${dist.ems.dir}/webapp/login.jsp" token="id='flashDownload'" value="id='flashDownload' style='display:none;'" encoding="${encoding}" />
+		<replace dir="${dist.ems.dir}/bin">
+			<include name="*.bat" />
+			<include name="*.sh" />
+			<replacefilter token="Topvision" value="${setup.corp.name}" />
+			<replacefilter token="NM3000" value="${app.name}" />
+		</replace>
+		<replace dir="${dist.ems.dir}/mysql/bin">
+			<include name="*.bat" />
+			<replacefilter token="Topvision" value="${setup.corp.name}" />
+		</replace>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy Linux                             |-->
+	<!--| 注意，linux打包进行了文件修改，如果和安装制作放在一起，需要放在安装的后面                                                            |-->
+	<!--+===================================================================+-->
+	<target name="deploy-linux" depends="init" if="isX64">
+		<delete dir="${dist.ems.dir}/mysql" />
+		<mkdir dir="${dist.ems.dir}/mysql" />
+		<copy todir="${dist.ems.dir}/mysql">
+			<fileset dir="${basedir}/mysql_linux_${os_arch}">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+		<delete dir="${dist.ems.dir}/jre" />
+		<mkdir dir="${dist.ems.dir}/jre" />
+		<copy todir="${dist.ems.dir}/jre">
+			<fileset dir="${basedir}/jre_linux_${os_arch}">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+		<copy todir="${dist.ems.dir}">
+			<fileset dir="${basedir}/linux">
+				<include name="**" />
+			</fileset>
+		</copy>
+		<replace file="${dist.ems.dir}/conf/mysql.properties" encoding="${encoding}">
+			<replacefilter>
+				<replacetoken>mysql\\bin\\restartMysql.bat</replacetoken>
+				<replacevalue>./mysql/bin/restartMysql.sh</replacevalue>
+			</replacefilter>
+		</replace>
+		<replace file="${dist.ems.dir}/conf/nm3000.properties" encoding="${encoding}">
+			<replacefilter>
+				<replacetoken>bin\\nm3000Restart.bat</replacetoken>
+				<replacevalue>./bin/nm3000Restart.sh</replacevalue>
+			</replacefilter>
+		</replace>
+		<replace file="${dist.ems.dir}/webapp/WEB-INF/conf/config.properties" encoding="${encoding}">
+			<replacefilter>
+				<replacetoken>language = zh_CN</replacetoken>
+				<replacevalue>language = en_US</replacevalue>
+			</replacefilter>
+		</replace>
+
+		<fixcrlf srcdir="${dist.ems.dir}" includes="**/*.sh" eol="lf" eof="remove" />
+		<fixcrlf srcdir="${dist.ems.dir}" includes="**/*.bat" eol="crlf" />
+		<fixcrlf srcdir="${dist.ems.dir}" includes="webapp/WEB-INF/conf/" eol="lf" eof="remove" />
+
+		<tar destfile="${basedir}/dist/setup" compression="gzip">
+			<tarfileset dir="${basedir}/dist">
+				<include name="ems/**" />
+				<exclude name="**/*.bat" />
+				<exclude name="**/*.exe" />
+				<exclude name="**/*.sh" />
+				<exclude name="ems/mysql/bin/*" />
+				<exclude name="ems/jre/bin/*" />
+				<exclude name="ems/webapp/WEB-INF/conf/config_en.properties" />
+			</tarfileset>
+			<tarfileset dir="${basedir}/dist">
+				<include name="ems/bin/runEngine.bat" />
+			</tarfileset>
+			<tarfileset dir="${basedir}/dist" filemode="755">
+				<include name="ems/**/*.sh" />
+				<include name="ems/mysql/bin/*" />
+				<include name="ems/jre/bin/*" />
+				<exclude name="**/*.bat" />
+				<exclude name="**/*.exe" />
+			</tarfileset>
+			<tarfileset dir="${basedir}/dist" prefix="/ems">
+				<include name="enginemgr/**" />
+				<exclude name="**/*.bat" />
+				<exclude name="**/*.exe" />
+				<exclude name="**/*.sh" />
+			</tarfileset>
+			<tarfileset dir="${basedir}/dist" prefix="/ems" filemode="755">
+				<include name="enginemgr/**/*.sh" />
+				<exclude name="**/*.bat" />
+				<exclude name="**/*.exe" />
+			</tarfileset>
+		</tar>
+		<tar destfile="${basedir}/dist/${app.name}-V${version}_${project.name}_${build.number}_setup.tar" compression="gzip">
+			<tarfileset dir="${basedir}/dist">
+				<include name="setup" />
+			</tarfileset>
+			<tarfileset dir="${basedir}/linux" filemode="755">
+				<include name="install.sh" />
+			</tarfileset>
+		</tar>
+		<delete file="${basedir}/dist/setup" />
+
+		<tar destfile="${basedir}/dist/update" compression="gzip">
+			<tarfileset dir="${basedir}/dist">
+				<include name="ems/systemd/diskspace*" />
+				<include name="ems/webapp/**" />
+				<include name="ems/lib/**" />
+				<include name="ems/jre/**" />
+				<exclude name="ems/jre/bin/*" />
+				<exclude name="ems/webapp/WEB-INF/conf/config_en.properties" />
+			</tarfileset>
+			<tarfileset dir="${basedir}/dist">
+				<include name="ems/bin/runEngine.bat" />
+			</tarfileset>
+			<tarfileset dir="${basedir}/dist" filemode="755">
+				<include name="ems/bin/*.sh" />
+				<include name="ems/jre/bin/*" />
+			</tarfileset>
+		</tar>
+		<tar destfile="${basedir}/dist/${app.name}-V${version}_${project.name}_${build.number}_update.tar" compression="gzip">
+			<tarfileset dir="${basedir}/dist">
+				<include name="update" />
+			</tarfileset>
+			<tarfileset dir="${basedir}/linux" filemode="755">
+				<include name="update.sh" />
+			</tarfileset>
+		</tar>
+		<delete file="${basedir}/dist/update" />
+	</target>
+
+
+	<!--+===================================================================+-->
+	<!--|                          Create a zip backup                      |-->
+	<!--+===================================================================+-->
+	<target name="bak" depends="init">
+		<zip destfile="${basedir}/dist/${app.name}-V${version}_${project.name}_${build.number}.zip">
+			<fileset dir="${dist.ems.dir}">
+				<include name="**" />
+			</fileset>
+		</zip>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Create setup                             |-->
+	<!--+===================================================================+-->
+	<target name="setup-comm" depends="init">
+		<copy tofile="${setup.dir}/setup.iss" file="${setup.dir}/${setup.corp.name.lowcase}-${setup.type}-${os_arch}.iss" overwrite="true" encoding="GBK">
+			<filterset>
+				<filter token="AppName" value="${app.name}" />
+				<filter token="AppVerName" value="V${version}" />
+				<filter token="AppVerDate" value="${build.time}" />
+				<filter token="VersionInfoDescription" value="${app.name}-V${version}D${build.datetime}" />
+				<filter token="CorpName" value="${setup.corp.name}" />
+				<filter token="CorpUrl" value="${setup.corp.url}" />
+				<filter token="OSArch" value="${os_arch}" />
+			</filterset>
+		</copy>
+		<replace file="${setup.dir}/setup.iss" token="2015" value="${build.year}" encoding="GBK" />
+		<antcall target="setup-oem" inheritAll="true" inheritRefs="true">
+		</antcall>
+		<exec dir="${setup.dir}" executable="${InnoSetup.dir}/ISCC.exe" osfamily="Windows">
+			<arg line="'${setup.dir}/setup.iss'" />
+		</exec>
+		<exec dir="${setup.dir}" executable="iscc" os="Linux">
+			<env key="LANG" value="zh_CN.GBK" />
+			<arg line="'${InnoSetup.dir}/ISCC.exe'" />
+			<arg line="'${setup.dir}/setup.iss'" />
+		</exec>
+		<move file="${setup.dir}/Output/${app.name}-Setup.exe" tofile="${basedir}/dist/${app.name}-V${version}_${project.name}_${build.number}_${setup.type}.exe" />
+		<delete dir="${setup.dir}/Output" />
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          Deploy OEM                             |-->
+	<!--+===================================================================+-->
+	<target name="setup-oem" depends="init" if="oem.name">
+		<replace file="${setup.dir}/setup.iss" token="鼎点视讯科技有限公司" value="${oem.corp.name.zh.cn}" encoding="GBK" />
+		<replace file="${setup.dir}/setup.iss" token="TOPVISION TECHNOLOGIES CO.,LTD." value="${oem.corp.name.en.us}" encoding="GBK" />
+	</target>
+	<!--+===================================================================+-->
+	<!--|                          Create setup                             |-->
+	<!--+===================================================================+-->
+	<target name="setup" depends="init">
+		<antcall target="setup-comm" inheritAll="true" inheritRefs="true">
+			<param name="setup.type" value="setup" />
+		</antcall>
+	</target >
+
+	<!--+===================================================================+-->
+	<!--|                          Create Update                            |-->
+	<!--+===================================================================+-->
+	<target name="update" depends="init">
+		<antcall target="setup-comm" inheritAll="true" inheritRefs="true">
+			<param name="setup.type" value="update" />
+		</antcall>
+	</target >
+
+	<!--+===================================================================+-->
+	<!--|                          Create setup                             |-->
+	<!--+===================================================================+-->
+	<target name="genKey" depends="init">
+		<genkey alias="topvision" keystore="release.keystore" storepass="sumavision027" validity="36500">
+			<dname>
+				<param name="CN" value="Topvision" />
+				<param name="OU" value="Victor" />
+				<param name="O" value="sumavision.com" />
+				<param name="C" value="CN" />
+			</dname>
+		</genkey>
+	</target>
+	<!--+===================================================================+-->
+	<!--|                          Deploy Wired                             |-->
+	<!--+===================================================================+-->
+	<target name="deploy" depends="init,clean,deploy-installer,deploy-console,deploy-core,deploy-pon,deploy-ccmts,deploy-cmts,deploy-cm,deploy-mobile,deploy-admin,deploy-env">
+		<echo>发布版本(${setup.corp.name}：V${version}_B${build.number}_D${build.time} by ${user.name}</echo>
+	</target>
+	<target name="deploy-with-enginemgr" depends="init,clean,deploy-installer,deploy-console,deploy-core,deploy-pon,deploy-ccmts,deploy-cmts,deploy-cm,deploy-mobile,deploy-admin,deploy-env,deploy-enginemgr">
+		<echo>发布版本(${setup.corp.name}：V${version}_B${build.number}_D${build.time} by ${user.name}</echo>
+	</target>
+	<target name="deploy-enginemgr-only" depends="init,clean,deploy-installer,deploy-console,deploy-core,deploy-pon,deploy-ccmts,deploy-cmts,deploy-cm,deploy-mobile,deploy-admin,deploy-enginemgr">
+		<echo>发布版本(${setup.corp.name}：V${version}_B${build.number}_D${build.time} by ${user.name}</echo>
+	</target>
+	<target name="deploy-linux-only" depends="init,clean,deploy-installer,deploy-console,deploy-core,deploy-pon,deploy-ccmts,deploy-cmts,deploy-cm,deploy-mobile,deploy-admin,deploy-enginemgr,deploy-linux">
+		<echo>发布版本(${setup.corp.name}：V${version}_B${build.number}_D${build.time} by ${user.name}</echo>
+	</target>
+	<target name="autobuild" depends="init,deploy-with-enginemgr,deploy-oem,bak,setup,update,deploy-linux">
+		<delete dir="${dist.ems.dir}" />
+		<delete dir="${dist.enginemgr.dir}" />
+	</target>
+	<target name="buildall" depends="init,deploy-with-enginemgr,deploy-oem,bak,setup,update,deploy-linux">
+		<echo>发布版本(${setup.corp.name}：V${version}_B${build.number}_D${build.time} by ${user.name}</echo>
+	</target>
+</project>

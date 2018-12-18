@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="autobuild" basedir="." default="autobuild">
+	<!--+===================================================================+-->
+	<!--|                          Create setup                             |-->
+	<!--+===================================================================+-->
+	<target name="autobuild" depends="buildall,cs.zip,repo-hash-list">
+	</target >
+
+	<!--+===================================================================+-->
+	<!--|                        编译工程和运行安装脚本                                                             |-->
+	<!--+===================================================================+-->
+	<target name="buildall">
+		<delete dir="${basedir}/dist" />
+		<mkdir dir="${basedir}/dist" />
+		<ant antfile="build.xml" target="autobuild" inheritAll="false">
+			<property name="project.name" value="${project.name}" />
+			<property name="build.number" value="${label}" />
+		</ant>
+	</target >
+
+	<target name="repo-hash-list">
+		<exec executable="wine" output="${basedir}/dist/repo_hash.txt" append="false">
+			<arg value="cmd" />
+			<arg value="/c" />
+			<arg value="echo Repo Hash list:" />
+		</exec>
+		<exec executable="wine" output="${basedir}/dist/repo_hash.txt" append="true">
+			<arg value="cmd" />
+			<arg value="/c" />
+			<arg value="echo ------------------- topvision-console-----------------------------------" />
+		</exec>
+		<exec executable="git" output="${basedir}/dist/repo_hash.txt" append="true">
+			<arg value="--git-dir=${basedir}/../topvision-console/.git" />
+			<arg value="log" />
+			<arg value="-1" />
+			<arg value="--pretty=format:%H" />
+		</exec>
+		<exec executable="wine" output="${basedir}/dist/repo_hash.txt" append="true">
+			<arg value="cmd" />
+			<arg value="/c" />
+			<arg value="echo." />
+		</exec>
+		<exec executable="wine" output="${basedir}/dist/repo_hash.txt" append="true">
+			<arg value="cmd" />
+			<arg value="/c" />
+			<arg value="echo ------------------- topvision-installer-----------------------------------" />
+		</exec>
+		<exec executable="git" output="${basedir}/dist/repo_hash.txt" append="true">
+			<arg value="--git-dir=${basedir}/../topvision-installer/.git" />
+			<arg value="log" />
+			<arg value="-1" />
+			<arg value="--pretty=format:%H" />
+		</exec>
+		<exec executable="wine" output="${basedir}/dist/repo_hash.txt" append="true">
+			<arg value="cmd" />
+			<arg value="/c" />
+			<arg value="echo." />
+		</exec>
+		<exec executable="wine" output="${basedir}/dist/repo_hash.txt" append="true">
+			<arg value="cmd" />
+			<arg value="/c" />
+			<arg value="echo ------------------- topvision-server-----------------------------------" />
+		</exec>
+		<exec executable="git" output="${basedir}/dist/repo_hash.txt" append="true">
+			<arg value="--git-dir=${basedir}/../topvision-server/.git" />
+			<arg value="log" />
+			<arg value="-1" />
+			<arg value="--pretty=format:%H" />
+		</exec>
+		<exec executable="wine" output="${basedir}/dist/repo_hash.txt" append="true">
+			<arg value="cmd" />
+			<arg value="/c" />
+			<arg value="echo." />
+		</exec>
+	</target>
+
+	<!--+===================================================================+-->
+	<!--|                          checkstyle		                        |-->
+	<!--+===================================================================+-->
+	<property name="cs.lib.dir" value="${basedir}/lib/checkstyle-5.5" />
+	<property name="cs.contrib.dir" value="${basedir}/lib/checkstyle-5.5/contrib" />
+	<property name="cs.result.dir" value="${basedir}/result" />
+	<property name="cs.result.html" value="${basedir}/result/html" />
+	<property name="cs.src.dir" value="${basedir}/../topvision-server/src/" />
+	<property name="cs.webapp.dir" value="${basedir}/../topvision-server/webapp/" />
+	<target name="cs.init">
+		<delete dir="${cs.result.dir}" />
+		<mkdir dir="${cs.result.dir}" />
+	</target>
+	<taskdef resource="checkstyletask.properties" classpath="${cs.lib.dir}/checkstyle-5.5-all.jar" />
+	<target name="cs.main" description="Generates a report of code convention violations." depends="cs.init">
+		<!-- 指定检查规范为GS_java_check.xml  fileset指的要检查的文件;formatter type指结果返回格式 -->
+		<checkstyle failonviolation="false" config="${cs.lib.dir}/topvision_checks.xml">
+			<fileset dir="${cs.src.dir}">
+				<include name="**/*.java" />
+				<exclude name="**/AdminAction.java" />
+				<exclude name="**/RestartAnalyzerAction.java" />
+				<exclude name="/test/**" />
+			</fileset>
+			<formatter type="plain" />
+			<formatter type="xml" toFile="${cs.result.dir}/checkstyle_report.xml" />
+		</checkstyle>
+		<checkstyle failonviolation="false" config="${cs.lib.dir}/topvision_web_checks.xml">
+			<fileset dir="${cs.webapp.dir}">
+				<include name="**/*.js" />
+				<include name="**/*.jsp" />
+				<exclude name="js/**" />
+				<exclude name="eoc/**" />
+				<exclude name="wlan/**" />
+				<exclude name="visifire/**" />
+				<exclude name="logger.jsp" />
+				<exclude name="admin/**" />
+				<exclude name="references/**" />
+			</fileset>
+			<formatter type="plain" />
+			<formatter type="xml" toFile="${cs.result.dir}/checkstyle_web_report.xml" />
+		</checkstyle>
+	</target>
+	<target name="cs.xml2html" depends="cs.main">
+		<xslt basedir="${cs.result.dir}" destdir="${cs.result.html}" extension=".html" style="${cs.contrib.dir}/checkstyle-frames.xsl">
+			<param name="output.dir" expression="${cs.result.html}" />
+		</xslt>
+	</target>
+	<target name="cs.zip" depends="cs.xml2html">
+		<zip destfile="${cs.result.dir}/cs.result.html.zip" basedir="${cs.result.dir}" />
+	</target>
+</project>
+
+

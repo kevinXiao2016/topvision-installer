@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Checkstyle" default="cs.xml2html" basedir=".">
+
+    <!--前面省略项目中的其他target -->
+    <!-- 定义lib存放目录 -->
+    <property name="cs.lib.dir" value="${basedir}/lib/checkstyle-5.5" />
+    <property name="cs.contrib.dir" value="${basedir}/lib/checkstyle-5.5/contrib" />
+
+    <!-- 定义输出结果目录 -->
+    <property name="cs.result.dir" value="${basedir}/result" />
+
+    <!-- 定义输出结果目录 -->
+    <property name="cs.result.html" value="${basedir}/result/html" />
+    <!-- 定义源码目录 配置该文件时请确认此目录 -->
+    <property name="cs.src.dir" value="${basedir}/../topvision-server/src/" />
+    <!-- 定义WEBAPP目录 配置该文件时请确认此目录 -->
+    <property name="cs.webapp.dir" value="${basedir}/../topvision-server/webapp/" />
+    <!--  初始化输出结果目录 -->
+    <target name="cs.init">
+        <delete dir="${cs.result.dir}" />
+        <mkdir dir="${cs.result.dir}" />
+    </target>
+    <!-- 引入ant的<checkstyle>命令 checkstyletask.properties文件在jar包中 -->
+    <taskdef resource="checkstyletask.properties" classpath="${cs.lib.dir}/checkstyle-5.5-all.jar" />
+    <!-- 定义checkstyle执行计划 -->
+    <target name="cs.main" description="Generates a report of code convention violations." depends="cs.init">
+        <!-- 指定检查规范为GS_java_check.xml  fileset指的要检查的文件;formatter type指结果返回格式 -->
+        <checkstyle failonviolation="false" config="${cs.lib.dir}/topvision_checks.xml">
+            <fileset dir="${cs.src.dir}">
+                <include name="**/*.java" />
+                <exclude name="**/AdminAction.java" />
+                <exclude name="**/RestartAnalyzerAction.java" />
+                <exclude name="/test/**" />
+            </fileset>
+            <formatter type="plain" />
+            <formatter type="xml" toFile="${cs.result.dir}/checkstyle_report.xml" />
+        </checkstyle>
+        <checkstyle failonviolation="false" config="${cs.lib.dir}/topvision_web_checks.xml">
+            <fileset dir="${cs.webapp.dir}">
+                <include name="**/*.js" />
+                <include name="**/*.jsp" />
+                <exclude name="js/**" />
+                <exclude name="eoc/**" />
+                <exclude name="wlan/**" />
+                <exclude name="visifire/**" />
+                <exclude name="logger.jsp" />
+                <exclude name="admin/**" />
+                <exclude name="references/**" />
+            </fileset>
+            <formatter type="plain" />
+            <formatter type="xml" toFile="${cs.result.dir}/checkstyle_web_report.xml" />
+        </checkstyle>
+    </target>
+    <target name="cs.xml2html" depends="cs.main">
+        <!-- 将生产结果根据扩展样式表文件checkstyle-frames.xsl生成html页面,输出到html -->
+        <xslt basedir="${cs.result.dir}" destdir="${cs.result.html}" extension=".html" style="${cs.contrib.dir}/checkstyle-frames.xsl">
+            <param name="output.dir" expression="${cs.result.html}" />
+        </xslt>
+    </target>
+    <target name="cs.zip" depends="cs.xml2html">
+        <zip destfile="${cs.result.dir}/cs.result.html.zip" basedir="${cs.result.dir}" />
+    </target>
+</project>

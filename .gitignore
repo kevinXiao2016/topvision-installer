@@ -1,0 +1,10 @@
+
+/dist
+/jre
+/.settings
+/setup/setup.iss
+/result
+/.build
+/.classes
+/release.number
+/mysql-5.5.45-winx64

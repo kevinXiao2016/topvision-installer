@@ -1,0 +1,23 @@
+#
+# Note: this file ( /usr/lib/systemd/system/nm3000_server.service )
+# will be overwritten on package upgrade, please copy the file to 
+#
+#  /etc/systemd/system/nm3000_server 
+#  
+# to make needed changes.
+# 
+# systemd-delta can be used to check differences between the two nm3000_server.service files.
+#
+
+[Unit]
+Description=NM3000 SERVER
+After=network.target
+After=syslog.target
+
+[Install]
+WantedBy=multi-user.target
+Alias=nm3000_server
+
+[Service]
+ExecStart=nm3000Path/ems/systemd/nm3000.sh start nm3000Path/ems/ 
+ExecStop=nm3000Path/ems/systemd/nm3000.sh stop nm3000Path/ems/

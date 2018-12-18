@@ -1,0 +1,53 @@
+# 解决网管进程是以SYSTEM用户运行导致权限不够不能连接的问题
+# 原理就是创建一个交互式的CMD来获取SYSTEM的权限。
+# start服务以后会出现一个对话框，点击查看消息就可以进入SYSTEM的CMD。
+sc Create SuperCMD binPath= "cmd /K start" type= own type= interact
+sc start SuperCMD
+
+# 用完删除服务
+sc delete SuperCMD
+
+# 导出线程信息
+bin\jstack <pid> >> stack.nm3000Service.txt
+
+# 导出内存信息
+bin\jmap -dump:format=b,file=heap.nm3000Service.bin <pid>
+
+# 查看资源/性能信息
+bin\jstat -class <pid>
+bin\jstat -options
+
+jstat命令格式 
+-class：统计class loader行为信息 
+-compiler：统计编译行为信息 
+-gc：统计jdk gc时heap信息 
+-gccapacity：统计不同的generations（不知道怎么翻译好，包括新生区，老年区，permanent区）相应的heap容量情况 
+-gccause：统计gc的情况，（同-gcutil）和引起gc的事件 
+-gcnew：统计gc时，新生代的情况 
+-gcnewcapacity：统计gc时，新生代heap容量 
+-gcold：统计gc时，老年区的情况 
+-gcoldcapacity：统计gc时，老年区heap容量 
+-gcpermcapacity：统计gc时，permanent区heap容量 
+-gcutil：统计gc时，heap情况 
+
+jstat输出参数内容 
+S0  — Heap上的 Survivor space 0 区已使用空间的百分比 
+S0C：S0当前容量的大小 
+S0U：S0已经使用的大小 
+S1  — Heap上的 Survivor space 1 区已使用空间的百分比 
+S1C：S1当前容量的大小 
+S1U：S1已经使用的大小 
+E   — Heap上的 Eden space 区已使用空间的百分比 
+EC：Eden space当前容量的大小 
+EU：Eden space已经使用的大小 
+O   — Heap上的 Old space 区已使用空间的百分比 
+OC：Old space当前容量的大小 
+OU：Old space已经使用的大小 
+P   — Perm space 区已使用空间的百分比 
+OC：Perm space当前容量的大小 
+OU：Perm space已经使用的大小 
+YGC — 从应用程序启动到采样时发生 Young GC 的次数 
+YGCT– 从应用程序启动到采样时 Young GC 所用的时间(单位秒) 
+FGC — 从应用程序启动到采样时发生 Full GC 的次数 
+FGCT– 从应用程序启动到采样时 Full GC 所用的时间(单位秒) 
+GCT — 从应用程序启动到采样时用于垃圾回收的总时间(单位秒)，它的值等于YGC+FGC 
